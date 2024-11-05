@@ -17,6 +17,7 @@ void simulate(int argc, char *argv[]) {
   uint64_t server_dram_cache_size = 1 * MiB;
   uint64_t server_disk_cache_size = 10 * MiB;
   std::string algo = "lru";
+  uint64_t lb = 0; // 0 for hash, 1 for random.
 
   
   // Parse command-line arguments
@@ -39,6 +40,9 @@ void simulate(int argc, char *argv[]) {
   if (argc > 5) {
     algo = argv[5];
   }
+  if (argc > 6) {
+    lb = std::strtoull(argv[6], nullptr, 0);
+  }
 
   // Verify data path
   if (access(data_path, F_OK) == -1) {
@@ -57,9 +61,9 @@ void simulate(int argc, char *argv[]) {
   const uint32_t hashpower = 20;
   printf(
       "Setting up a cluster of %lu servers, each server has %lu MB DRAM cache "
-      "and %lu MB disk cache, using %s as cache replacement algorithm\n",
+      "and %lu MB disk cache, using %s as cache replacement algorithm, using %lu as lb\n",
       (unsigned long)n_server, (unsigned long)(server_dram_cache_size / MiB),
-      (unsigned long)(server_disk_cache_size / MiB), algo.c_str());
+      (unsigned long)(server_disk_cache_size / MiB), algo.c_str(), (unsigned long)lb);
 
   CacheCluster cluster(0);
 
