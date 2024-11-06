@@ -56,7 +56,7 @@ class CacheCluster {
    * cached, the object will be loaded from the origin server
    *
    */
-  bool get(request_t *req);
+  bool get(request_t *req, const std::string& lb);
 
   /**
    * @brief add a cache server to the cluster, return the index of the server
