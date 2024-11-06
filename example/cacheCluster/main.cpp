@@ -17,15 +17,13 @@ void simulate(int argc, char *argv[]) {
   uint64_t server_dram_cache_size = 1 * MiB;
   uint64_t server_disk_cache_size = 10 * MiB;
   std::string algo = "lru";
-  uint64_t lb = 0; // 0 for hash, 1 for random.
+  std::string lb = "consistent_hash";
 
-  
   // Parse command-line arguments
   if (argc > 1) {
     data_path = argv[1];
   } else {
-    printf("No trace path provided\n");
-    exit(1);
+    printf("Using default data at ../../../data/twitter_cluster52.csv\n");
   }
 
   if (argc > 2) {
@@ -38,10 +36,10 @@ void simulate(int argc, char *argv[]) {
     server_disk_cache_size = std::strtoull(argv[4], nullptr, 10) * MiB;
   }
   if (argc > 5) {
-    algo = argv[5];
+    lb = argv[5];
   }
   if (argc > 6) {
-    lb = std::strtoull(argv[6], nullptr, 0);
+    algo = argv[6];
   }
 
   // Verify data path
@@ -50,20 +48,26 @@ void simulate(int argc, char *argv[]) {
     exit(1);
   }
 
+  // Set up CSV reader
+  reader_init_param_t init_params = default_reader_init_params();
+  //init_params.obj_id_field = 2;
+  //init_params.obj_size_field = 3;
+  //init_params.time_field = 1;
+  //init_params.has_header_set = true;
+  //init_params.has_header = false;
+  //init_params.delimiter = ',';
+
   // Open trace
   reader_t *reader = setup_reader(data_path, ORACLE_GENERAL_TRACE, NULL);
-  
-  // print_reader(reader);
-  // printf("file size: %lu\n", reader->file_size);
-  // printf("n_total_req: %lu\n", reader->n_total_req);
-  
-  
+  print_reader(reader);
+  printf("file size: %lu\n", reader->file_size);
+  printf("n_total_req: %lu\n", reader->n_total_req);
   const uint32_t hashpower = 20;
   printf(
       "Setting up a cluster of %lu servers, each server has %lu MB DRAM cache "
-      "and %lu MB disk cache, using %s as cache replacement algorithm, using %lu as lb\n",
+      "and %lu MB disk cache, using %s as cache replacement algorithm, using %s as lb\n",
       (unsigned long)n_server, (unsigned long)(server_dram_cache_size / MiB),
-      (unsigned long)(server_disk_cache_size / MiB), algo.c_str(), (unsigned long)lb);
+      (unsigned long)(server_disk_cache_size / MiB), algo.c_str(), lb.c_str());
 
   CacheCluster cluster(0);
 
@@ -81,7 +85,7 @@ void simulate(int argc, char *argv[]) {
   uint64_t n_req = 0, n_req_byte = 0;
 
   while (read_trace(reader, req) == 0) {
-    bool hit = cluster.get(req);
+    bool hit = cluster.get(req, lb);
     if (!hit) {
       n_miss += 1;
       n_miss_byte += req->obj_size;
