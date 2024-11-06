@@ -45,10 +45,14 @@ class Cache {
     params.consider_obj_metadata = false;
     params.hashpower = hashpower;
 
-    if (strcasecmp(cache_alg.c_str(), "lru") == 0) {
+   if (strcasecmp(cache_alg.c_str(), "lru") == 0) {
       this->_cache = LRU_init(params, NULL);
     } else if (strcasecmp(cache_alg.c_str(), "fifo") == 0) {
       this->_cache = FIFO_init(params, NULL);
+    } else if (strcasecmp(cache_alg.c_str(), "sieve") == 0) {
+      this->_cache = Sieve_init(params, NULL);
+    } else if (strcasecmp(cache_alg.c_str(), "clock") == 0) {
+      this->_cache = Clock_init(params, NULL);
     } else {
       ERROR("unknown cache replacement algorithm %s\n", cache_alg.c_str());
       abort();
