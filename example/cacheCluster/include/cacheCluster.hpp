@@ -19,6 +19,8 @@
 #include "libCacheSim/cache.h"
 #include "libCacheSim/logging.h"
 #include "libCacheSim/reader.h"
+#include <random>
+#include <iostream>
 
 namespace CDNSimulator {
 
@@ -35,6 +37,10 @@ class CacheCluster {
   // the cache servers in this cluster
   std::vector<CacheServer> _cache_servers_vec;
 
+  std::mt19937 gen;
+
+  std::uniform_int_distribution<size_t> dist;
+
  public:
   unsigned long cluster_id;
 
@@ -48,6 +54,8 @@ class CacheCluster {
   CacheCluster(unsigned long cluster_id = 0) {
     this->cluster_id = cluster_id;
     this->_cache_servers_vec.reserve(128);
+    this->gen = std::random_device{}();
+    this->dist = std::uniform_int_distribution<size_t>(0, 0);
     // this->_hasher = myHasher(n_server);
   }
 
@@ -86,6 +94,8 @@ class CacheCluster {
 
     this->_ring = ch_ring_create_ring(this->_cache_servers_vec.size(),
                                       server_normalized_weights_vec.data());
+
+    this->dist = std::uniform_int_distribution<size_t>(0, this->_cache_servers_vec.size() - 1);
 
     return this->_cache_servers_vec.size() - 1;
   }
