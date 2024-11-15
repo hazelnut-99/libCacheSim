@@ -16,7 +16,8 @@ void simulate(int argc, char *argv[]) {
   uint64_t n_server = 10;
   uint64_t server_dram_cache_size = 1 * MiB;
   uint64_t server_disk_cache_size = 10 * MiB;
-  std::string algo = "lru";
+  std::string algo1 = "lru";
+  std::string algo2 = "lru";
   std::string lb = "consistent_hash";
 
   // Parse command-line arguments
@@ -39,7 +40,10 @@ void simulate(int argc, char *argv[]) {
     lb = argv[5];
   }
   if (argc > 6) {
-    algo = argv[6];
+    algo1 = argv[6];
+  }
+   if (argc > 7) {
+    algo2 = argv[7];
   }
 
   // Verify data path
@@ -65,16 +69,16 @@ void simulate(int argc, char *argv[]) {
   const uint32_t hashpower = 20;
   printf(
       "Setting up a cluster of %lu servers, each server has %lu MB DRAM cache "
-      "and %lu MB disk cache, using %s as cache replacement algorithm, using %s as lb\n",
+      "and %lu MB disk cache, using %s as l1 cache algorithm, %s as l2 cache algorithm, using %s as lb\n",
       (unsigned long)n_server, (unsigned long)(server_dram_cache_size / MiB),
-      (unsigned long)(server_disk_cache_size / MiB), algo.c_str(), lb.c_str());
+      (unsigned long)(server_disk_cache_size / MiB), algo1.c_str(), algo2.c_str(), lb.c_str());
 
   CacheCluster cluster(0);
 
   for (uint64_t i = 0; i < n_server; i++) {
     CacheServer server(i);
-    server.add_cache(std::move(Cache(server_dram_cache_size, algo, hashpower)));
-    server.add_cache(std::move(Cache(server_disk_cache_size, algo, hashpower)));
+    server.add_cache(std::move(Cache(server_dram_cache_size, algo1, hashpower)));
+    server.add_cache(std::move(Cache(server_disk_cache_size, algo2, hashpower)));
     cluster.add_server(std::move(server));
   }
 
@@ -84,14 +88,28 @@ void simulate(int argc, char *argv[]) {
   uint64_t n_miss = 0, n_miss_byte = 0;
   uint64_t n_req = 0, n_req_byte = 0;
 
-  while (read_trace(reader, req) == 0) {
-    bool hit = cluster.get(req, lb);
-    if (!hit) {
-      n_miss += 1;
-      n_miss_byte += req->obj_size;
-    }
-    n_req += 1;
-    n_req_byte += req->obj_size;
+
+  if(lb == "random") {
+        while (read_trace(reader, req) == 0) {
+            bool hit = cluster.get_random(req);
+            if (!hit) {
+              n_miss += 1;
+              n_miss_byte += req->obj_size;
+            }
+            n_req += 1;
+            n_req_byte += req->obj_size;
+        }
+  } else {
+      while (read_trace(reader, req) == 0) {
+            bool hit = cluster.get_consistent_hash(req);
+            if (!hit) {
+              n_miss += 1;
+              n_miss_byte += req->obj_size;
+            }
+            n_req += 1;
+            n_req_byte += req->obj_size;
+       }
+
   }
 
   std::cout << n_req << " requests, " << n_miss << " misses, miss ratio: " << (double)n_miss / n_req
