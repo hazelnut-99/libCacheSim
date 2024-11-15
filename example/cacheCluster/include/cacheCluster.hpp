@@ -54,7 +54,8 @@ class CacheCluster {
   CacheCluster(unsigned long cluster_id = 0) {
     this->cluster_id = cluster_id;
     this->_cache_servers_vec.reserve(128);
-    this->gen = std::random_device{}();
+    std::random_device rd;
+    this->gen = std::mt19937(rd()); // Use random_device to seed the generator
     this->dist = std::uniform_int_distribution<size_t>(0, 0);
     // this->_hasher = myHasher(n_server);
   }
